@@ -23,6 +23,14 @@
 #ifndef _EIDSP_NUMPY_H_
 #define _EIDSP_NUMPY_H_
 
+// it's valid to include the SDK without a model, but there's information that we need
+// in model_metadata.h (like the FFT tables used).
+// if the compiler does not support the __has_include directive we'll assume that the
+// file exists.
+#ifndef __has_include
+#define __has_include 1
+#endif // __has_include
+
 #include <stdint.h>
 #include <string.h>
 #include <stddef.h>
@@ -33,8 +41,12 @@
 #include "memory.hpp"
 #include "dct/fast-dct-fft.h"
 #include "kissfft/kiss_fftr.h"
-#if EIDSP_USE_CMSIS_FIXED_RFFT
+#if __has_include("model-parameters/model_metadata.h")
+#include "model-parameters/model_metadata.h"
+#endif
+#if EIDSP_USE_CMSIS_DSP
 #include "edge-impulse-sdk/CMSIS/DSP/Include/arm_math.h"
+#include "edge-impulse-sdk/CMSIS/DSP/Include/arm_const_structs.h"
 #endif
 
 #ifdef __MBED__
@@ -49,7 +61,7 @@ namespace ei {
 
 // clang-format off
 // lookup table for quantized values between 0.0f and 1.0f
-static const float quantized_values_one_zero[] = { (0.0f / 1.0f), (1.0f / 100.0f), (2.0f / 100.0f), (3.0f / 100.0f), (4.0f / 100.0f), (1.0f / 22.0f), (1.0f / 21.0f), (1.0f / 20.0f), (1.0f / 19.0f), (1.0f / 18.0f), (1.0f / 17.0f), (6.0f / 100.0f), (1.0f / 16.0f), (1.0f / 15.0f), (7.0f / 100.0f), (1.0f / 14.0f), (1.0f / 13.0f), (8.0f / 100.0f), (1.0f / 12.0f), (9.0f / 100.0f), (1.0f / 11.0f), (2.0f / 21.0f), (1.0f / 10.0f), (2.0f / 19.0f), (11.0f / 100.0f), (1.0f / 9.0f), (2.0f / 17.0f), (12.0f / 100.0f), (1.0f / 8.0f), (13.0f / 100.0f), (2.0f / 15.0f), (3.0f / 22.0f), (14.0f / 100.0f), (1.0f / 7.0f), (3.0f / 20.0f), (2.0f / 13.0f), (3.0f / 19.0f), (16.0f / 100.0f), (1.0f / 6.0f), (17.0f / 100.0f), (3.0f / 17.0f), (18.0f / 100.0f), (2.0f / 11.0f), (3.0f / 16.0f), (19.0f / 100.0f), (4.0f / 21.0f), (1.0f / 5.0f), (21.0f / 100.0f), (4.0f / 19.0f), (3.0f / 14.0f), (22.0f / 100.0f), (2.0f / 9.0f), (5.0f / 22.0f), (23.0f / 100.0f), (3.0f / 13.0f), (4.0f / 17.0f), (5.0f / 21.0f), (24.0f / 100.0f), (1.0f / 4.0f), (26.0f / 100.0f), (5.0f / 19.0f), (4.0f / 15.0f), (27.0f / 100.0f), (3.0f / 11.0f), (5.0f / 18.0f), (28.0f / 100.0f), (2.0f / 7.0f), (29.0f / 100.0f), (5.0f / 17.0f), (3.0f / 10.0f), (4.0f / 13.0f), (31.0f / 100.0f), (5.0f / 16.0f), (6.0f / 19.0f), (7.0f / 22.0f), (32.0f / 100.0f), (33.0f / 100.0f), (1.0f / 3.0f), (34.0f / 100.0f), (7.0f / 20.0f), (6.0f / 17.0f), (5.0f / 14.0f), (36.0f / 100.0f), (4.0f / 11.0f), (7.0f / 19.0f), (37.0f / 100.0f), (3.0f / 8.0f), (38.0f / 100.0f), (8.0f / 21.0f), (5.0f / 13.0f), (7.0f / 18.0f), (39.0f / 100.0f), (2.0f / 5.0f), (9.0f / 22.0f), (41.0f / 100.0f), (7.0f / 17.0f), (5.0f / 12.0f), (42.0f / 100.0f), (8.0f / 19.0f), (3.0f / 7.0f), (43.0f / 100.0f), (7.0f / 16.0f), (44.0f / 100.0f), (4.0f / 9.0f), (9.0f / 20.0f), (5.0f / 11.0f), (46.0f / 100.0f), (6.0f / 13.0f), (7.0f / 15.0f), (47.0f / 100.0f), (8.0f / 17.0f), (9.0f / 19.0f), (10.0f / 21.0f), (48.0f / 100.0f), (49.0f / 100.0f), (1.0f / 2.0f), (51.0f / 100.0f), (52.0f / 100.0f), (11.0f / 21.0f), (10.0f / 19.0f), (9.0f / 17.0f), (53.0f / 100.0f), (8.0f / 15.0f), (7.0f / 13.0f), (54.0f / 100.0f), (6.0f / 11.0f), (11.0f / 20.0f), (5.0f / 9.0f), (56.0f / 100.0f), (9.0f / 16.0f), (57.0f / 100.0f), (4.0f / 7.0f), (11.0f / 19.0f), (58.0f / 100.0f), (7.0f / 12.0f), (10.0f / 17.0f), (59.0f / 100.0f), (13.0f / 22.0f), (3.0f / 5.0f), (61.0f / 100.0f), (11.0f / 18.0f), (8.0f / 13.0f), (13.0f / 21.0f), (62.0f / 100.0f), (5.0f / 8.0f), (63.0f / 100.0f), (12.0f / 19.0f), (7.0f / 11.0f), (64.0f / 100.0f), (9.0f / 14.0f), (11.0f / 17.0f), (13.0f / 20.0f), (66.0f / 100.0f), (2.0f / 3.0f), (67.0f / 100.0f), (68.0f / 100.0f), (15.0f / 22.0f), (13.0f / 19.0f), (11.0f / 16.0f), (69.0f / 100.0f), (9.0f / 13.0f), (7.0f / 10.0f), (12.0f / 17.0f), (71.0f / 100.0f), (5.0f / 7.0f), (72.0f / 100.0f), (13.0f / 18.0f), (8.0f / 11.0f), (73.0f / 100.0f), (11.0f / 15.0f), (14.0f / 19.0f), (74.0f / 100.0f), (3.0f / 4.0f), (76.0f / 100.0f), (16.0f / 21.0f), (13.0f / 17.0f), (10.0f / 13.0f), (77.0f / 100.0f), (17.0f / 22.0f), (7.0f / 9.0f), (78.0f / 100.0f), (11.0f / 14.0f), (15.0f / 19.0f), (79.0f / 100.0f), (4.0f / 5.0f), (17.0f / 21.0f), (81.0f / 100.0f), (13.0f / 16.0f), (9.0f / 11.0f), (82.0f / 100.0f), (14.0f / 17.0f), (83.0f / 100.0f), (5.0f / 6.0f), (84.0f / 100.0f), (16.0f / 19.0f), (11.0f / 13.0f), (17.0f / 20.0f), (6.0f / 7.0f), (86.0f / 100.0f), (19.0f / 22.0f), (13.0f / 15.0f), (87.0f / 100.0f), (7.0f / 8.0f), (88.0f / 100.0f), (15.0f / 17.0f), (8.0f / 9.0f), (89.0f / 100.0f), (17.0f / 19.0f), (9.0f / 10.0f), (19.0f / 21.0f), (10.0f / 11.0f), (91.0f / 100.0f), (11.0f / 12.0f), (92.0f / 100.0f), (12.0f / 13.0f), (13.0f / 14.0f), (93.0f / 100.0f), (14.0f / 15.0f), (15.0f / 16.0f), (94.0f / 100.0f), (16.0f / 17.0f), (17.0f / 18.0f), (18.0f / 19.0f), (19.0f / 20.0f), (20.0f / 21.0f), (21.0f / 22.0f), (96.0f / 100.0f), (97.0f / 100.0f), (98.0f / 100.0f), (99.0f / 100.0f), (1.0f / 1.0f) ,
+static constexpr float quantized_values_one_zero[] = { (0.0f / 1.0f), (1.0f / 100.0f), (2.0f / 100.0f), (3.0f / 100.0f), (4.0f / 100.0f), (1.0f / 22.0f), (1.0f / 21.0f), (1.0f / 20.0f), (1.0f / 19.0f), (1.0f / 18.0f), (1.0f / 17.0f), (6.0f / 100.0f), (1.0f / 16.0f), (1.0f / 15.0f), (7.0f / 100.0f), (1.0f / 14.0f), (1.0f / 13.0f), (8.0f / 100.0f), (1.0f / 12.0f), (9.0f / 100.0f), (1.0f / 11.0f), (2.0f / 21.0f), (1.0f / 10.0f), (2.0f / 19.0f), (11.0f / 100.0f), (1.0f / 9.0f), (2.0f / 17.0f), (12.0f / 100.0f), (1.0f / 8.0f), (13.0f / 100.0f), (2.0f / 15.0f), (3.0f / 22.0f), (14.0f / 100.0f), (1.0f / 7.0f), (3.0f / 20.0f), (2.0f / 13.0f), (3.0f / 19.0f), (16.0f / 100.0f), (1.0f / 6.0f), (17.0f / 100.0f), (3.0f / 17.0f), (18.0f / 100.0f), (2.0f / 11.0f), (3.0f / 16.0f), (19.0f / 100.0f), (4.0f / 21.0f), (1.0f / 5.0f), (21.0f / 100.0f), (4.0f / 19.0f), (3.0f / 14.0f), (22.0f / 100.0f), (2.0f / 9.0f), (5.0f / 22.0f), (23.0f / 100.0f), (3.0f / 13.0f), (4.0f / 17.0f), (5.0f / 21.0f), (24.0f / 100.0f), (1.0f / 4.0f), (26.0f / 100.0f), (5.0f / 19.0f), (4.0f / 15.0f), (27.0f / 100.0f), (3.0f / 11.0f), (5.0f / 18.0f), (28.0f / 100.0f), (2.0f / 7.0f), (29.0f / 100.0f), (5.0f / 17.0f), (3.0f / 10.0f), (4.0f / 13.0f), (31.0f / 100.0f), (5.0f / 16.0f), (6.0f / 19.0f), (7.0f / 22.0f), (32.0f / 100.0f), (33.0f / 100.0f), (1.0f / 3.0f), (34.0f / 100.0f), (7.0f / 20.0f), (6.0f / 17.0f), (5.0f / 14.0f), (36.0f / 100.0f), (4.0f / 11.0f), (7.0f / 19.0f), (37.0f / 100.0f), (3.0f / 8.0f), (38.0f / 100.0f), (8.0f / 21.0f), (5.0f / 13.0f), (7.0f / 18.0f), (39.0f / 100.0f), (2.0f / 5.0f), (9.0f / 22.0f), (41.0f / 100.0f), (7.0f / 17.0f), (5.0f / 12.0f), (42.0f / 100.0f), (8.0f / 19.0f), (3.0f / 7.0f), (43.0f / 100.0f), (7.0f / 16.0f), (44.0f / 100.0f), (4.0f / 9.0f), (9.0f / 20.0f), (5.0f / 11.0f), (46.0f / 100.0f), (6.0f / 13.0f), (7.0f / 15.0f), (47.0f / 100.0f), (8.0f / 17.0f), (9.0f / 19.0f), (10.0f / 21.0f), (48.0f / 100.0f), (49.0f / 100.0f), (1.0f / 2.0f), (51.0f / 100.0f), (52.0f / 100.0f), (11.0f / 21.0f), (10.0f / 19.0f), (9.0f / 17.0f), (53.0f / 100.0f), (8.0f / 15.0f), (7.0f / 13.0f), (54.0f / 100.0f), (6.0f / 11.0f), (11.0f / 20.0f), (5.0f / 9.0f), (56.0f / 100.0f), (9.0f / 16.0f), (57.0f / 100.0f), (4.0f / 7.0f), (11.0f / 19.0f), (58.0f / 100.0f), (7.0f / 12.0f), (10.0f / 17.0f), (59.0f / 100.0f), (13.0f / 22.0f), (3.0f / 5.0f), (61.0f / 100.0f), (11.0f / 18.0f), (8.0f / 13.0f), (13.0f / 21.0f), (62.0f / 100.0f), (5.0f / 8.0f), (63.0f / 100.0f), (12.0f / 19.0f), (7.0f / 11.0f), (64.0f / 100.0f), (9.0f / 14.0f), (11.0f / 17.0f), (13.0f / 20.0f), (66.0f / 100.0f), (2.0f / 3.0f), (67.0f / 100.0f), (68.0f / 100.0f), (15.0f / 22.0f), (13.0f / 19.0f), (11.0f / 16.0f), (69.0f / 100.0f), (9.0f / 13.0f), (7.0f / 10.0f), (12.0f / 17.0f), (71.0f / 100.0f), (5.0f / 7.0f), (72.0f / 100.0f), (13.0f / 18.0f), (8.0f / 11.0f), (73.0f / 100.0f), (11.0f / 15.0f), (14.0f / 19.0f), (74.0f / 100.0f), (3.0f / 4.0f), (76.0f / 100.0f), (16.0f / 21.0f), (13.0f / 17.0f), (10.0f / 13.0f), (77.0f / 100.0f), (17.0f / 22.0f), (7.0f / 9.0f), (78.0f / 100.0f), (11.0f / 14.0f), (15.0f / 19.0f), (79.0f / 100.0f), (4.0f / 5.0f), (17.0f / 21.0f), (81.0f / 100.0f), (13.0f / 16.0f), (9.0f / 11.0f), (82.0f / 100.0f), (14.0f / 17.0f), (83.0f / 100.0f), (5.0f / 6.0f), (84.0f / 100.0f), (16.0f / 19.0f), (11.0f / 13.0f), (17.0f / 20.0f), (6.0f / 7.0f), (86.0f / 100.0f), (19.0f / 22.0f), (13.0f / 15.0f), (87.0f / 100.0f), (7.0f / 8.0f), (88.0f / 100.0f), (15.0f / 17.0f), (8.0f / 9.0f), (89.0f / 100.0f), (17.0f / 19.0f), (9.0f / 10.0f), (19.0f / 21.0f), (10.0f / 11.0f), (91.0f / 100.0f), (11.0f / 12.0f), (92.0f / 100.0f), (12.0f / 13.0f), (13.0f / 14.0f), (93.0f / 100.0f), (14.0f / 15.0f), (15.0f / 16.0f), (94.0f / 100.0f), (16.0f / 17.0f), (17.0f / 18.0f), (18.0f / 19.0f), (19.0f / 20.0f), (20.0f / 21.0f), (21.0f / 22.0f), (96.0f / 100.0f), (97.0f / 100.0f), (98.0f / 100.0f), (99.0f / 100.0f), (1.0f / 1.0f) ,
     1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f };
 // clang-format on
 
@@ -115,6 +127,38 @@ public:
 
         // and copy the shift buffer back to the beginning of the array
         memcpy(input_array, shift_matrix.buffer, shift * sizeof(int));
+
+        return EIDSP_OK;
+    }
+
+    /**
+     * Roll array elements along a given axis.
+     * Elements that roll beyond the last position are re-introduced at the first.
+     * @param input_array
+     * @param input_array_size
+     * @param shift The number of places by which elements are shifted.
+     * @returns EIDSP_OK if OK
+     */
+    static int roll(int16_t *input_array, size_t input_array_size, int shift) {
+        if (shift < 0) {
+            shift = input_array_size + shift;
+        }
+
+        if (shift == 0) {
+            return EIDSP_OK;
+        }
+
+        // so we need to allocate a buffer of the size of shift...
+        EI_DSP_MATRIX(shift_matrix, 1, shift);
+
+        // we copy from the end of the buffer into the shift buffer
+        memcpy(shift_matrix.buffer, input_array + input_array_size - shift, shift * sizeof(int16_t));
+
+        // now we do a memmove to shift the array
+        memmove(input_array + shift, input_array, (input_array_size - shift) * sizeof(int16_t));
+
+        // and copy the shift buffer back to the beginning of the array
+        memcpy(input_array, shift_matrix.buffer, shift * sizeof(int16_t));
 
         return EIDSP_OK;
     }
@@ -1194,7 +1238,11 @@ public:
             arm_sqrt_f32(var * var * var, &var);
 
             // Calculate skew = (m_3) / (variance)^(3/2)
-            output_matrix->buffer[row] = m_3 / var;
+            if (var == 0.0f) {
+                output_matrix->buffer[row] = 0.0f;
+            } else {
+                output_matrix->buffer[row] = m_3 / var;
+            }
 #else
             float sum = 0.0f;
             float mean;
@@ -1222,7 +1270,11 @@ public:
             m_2 = sqrt(m_2 * m_2 * m_2);
 
             // Calculate skew = (m_3) / (m_2)^(3/2)
-            output_matrix->buffer[row] = m_3 / m_2;
+            if (m_2 == 0.0f) {
+                output_matrix->buffer[row] = 0.0f;
+            } else {
+                output_matrix->buffer[row] = m_3 / m_2;
+            }
 #endif
         }
 
@@ -1256,7 +1308,12 @@ public:
             cmsis_arm_fourth_moment(&input_matrix->buffer[(row * input_matrix->cols)], input_matrix->cols, mean, &m_4);
 
             // Calculate Fisher kurtosis = (m_4 / variance^2) - 3
-            output_matrix->buffer[row] = (m_4 / (var * var)) - 3;
+            var = var * var;
+            if (var == 0.0f) {
+                output_matrix->buffer[row] = -3.0f;
+            } else {
+                output_matrix->buffer[row] = (m_4 / var) - 3.0f;
+            }
 #else
             // Calculate the mean
             float mean = 0.0f;
@@ -1284,7 +1341,11 @@ public:
             // Square the variance
             variance = variance * variance;
             // Calculate Fisher kurtosis = (m_4 / variance^2) - 3
-            output_matrix->buffer[row] = (m_4 / variance) - 3;
+            if (variance == 0.0f) {
+                output_matrix->buffer[row] = -3.0f;
+            } else {
+                output_matrix->buffer[row] = (m_4 / variance) - 3.0f;
+            }
 #endif
         }
 
@@ -1334,7 +1395,7 @@ public:
         else {
             // hardware acceleration only works for the powers above...
             arm_rfft_fast_instance_f32 rfft_instance;
-            arm_status status = arm_rfft_fast_init_f32(&rfft_instance, n_fft);
+            int status = cmsis_rfft_init_f32(&rfft_instance, n_fft);
             if (status != ARM_MATH_SUCCESS) {
                 return status;
             }
@@ -1379,6 +1440,7 @@ public:
      * @returns 0 if OK
      */
     static int rfft(const EIDSP_i16 *src, size_t src_size, EIDSP_i16 *output, size_t output_size, size_t n_fft) {
+#if EIDSP_USE_CMSIS_DSP
         size_t n_fft_out_features = (n_fft / 2) + 1;
         if (output_size != n_fft_out_features) {
             EIDSP_ERR(EIDSP_BUFFER_SIZE_MISMATCH);
@@ -1397,7 +1459,6 @@ public:
         // pad to the rigth with zeros
         memset(fft_input.buffer + src_size, 0, (n_fft - src_size) * sizeof(EIDSP_i16));
 
-#if EIDSP_USE_CMSIS_FIXED_RFFT
         if (n_fft != 32 && n_fft != 64 && n_fft != 128 && n_fft != 256 &&
             n_fft != 512 && n_fft != 1024 && n_fft != 2048 && n_fft != 4096) {
             EIDSP_ERR(EIDSP_PARAMETER_INVALID); //TODO zero pad so we can use anyway`
@@ -1428,13 +1489,11 @@ public:
                 fft_output_buffer_ix += 2;
             }
         }
-#else
-        #error("No DSP lib defined!  Use CMSIS-DSP for C implementation ( #define EIDSP_USE_CMSIS_FIXED_RFFT 1 )")
-#endif
-
         return EIDSP_OK;
+#else
+        return EIDSP_REQUIRES_CMSIS_DSP;
+#endif
     }
-
 
     /**
      * Compute the one-dimensional discrete Fourier Transform for real input.
@@ -1447,6 +1506,7 @@ public:
      * @returns 0 if OK
      */
     static int rfft(const EIDSP_i32 *src, size_t src_size, EIDSP_i32 *output, size_t output_size, size_t n_fft) {
+#if EIDSP_USE_CMSIS_DSP
         size_t n_fft_out_features = (n_fft / 2) + 1;
         if (output_size != n_fft_out_features) {
             EIDSP_ERR(EIDSP_BUFFER_SIZE_MISMATCH);
@@ -1459,7 +1519,7 @@ public:
 
         // declare input and output arrays
         EI_DSP_i32_MATRIX(fft_input, 1, n_fft << 1);
-        
+
         if (!fft_input.buffer) {
             EIDSP_ERR(EIDSP_OUT_OF_MEM);
         }
@@ -1469,7 +1529,6 @@ public:
         // pad to the rigth with zeros
         memset(fft_input.buffer + src_size, 0, (n_fft - src_size) * sizeof(EIDSP_i32));
 
-#if EIDSP_USE_CMSIS_FIXED_RFFT
         if (n_fft != 32 && n_fft != 64 && n_fft != 128 && n_fft != 256 &&
             n_fft != 512 && n_fft != 1024 && n_fft != 2048 && n_fft != 4096) {
             EIDSP_ERR(EIDSP_PARAMETER_INVALID);
@@ -1502,11 +1561,10 @@ public:
                 fft_output_buffer_ix += 2;
             }
         }
-#else
-        #error("No DSP lib defined!  Use CMSIS-DSP for C implementation ( #define EIDSP_USE_CMSIS_FIXED_RFFT 1 )")
-#endif
-
         return EIDSP_OK;
+#else
+        return EIDSP_REQUIRES_CMSIS_DSP;
+#endif
     }
 
     /**
@@ -1559,7 +1617,7 @@ public:
         else {
             // hardware acceleration only works for the powers above...
             arm_rfft_fast_instance_f32 rfft_instance;
-            arm_status status = arm_rfft_fast_init_f32(&rfft_instance, n_fft);
+            int status = cmsis_rfft_init_f32(&rfft_instance, n_fft);
             if (status != ARM_MATH_SUCCESS) {
                 return status;
             }
@@ -1595,6 +1653,7 @@ public:
     }
 
     static int rfft(const EIDSP_i16 *src, size_t src_size, fft_complex_i16_t *output, size_t output_size, size_t n_fft) {
+#if EIDSP_USE_CMSIS_DSP
         size_t n_fft_out_features = (n_fft / 2) + 1;
         if (output_size != n_fft_out_features) {
             EIDSP_ERR(EIDSP_BUFFER_SIZE_MISMATCH);
@@ -1623,16 +1682,11 @@ public:
             memset(fft_input.buffer + src_size, 0, (n_fft - src_size) * sizeof(EIDSP_i16));
         }
 
-#if 1//EIDSP_USE_CMSIS_DSP
-        // if (n_fft != 32 && n_fft != 64 && n_fft != 128 && n_fft != 256 &&
-        //     n_fft != 512 && n_fft != 1024 && n_fft != 2048 && n_fft != 4096) {
-        //     int ret = software_rfft(fft_input.buffer, output, n_fft, n_fft_out_features);
-        //     if (ret != EIDSP_OK) {
-        //         EIDSP_ERR(ret);
-        //     }
-        // }
-        // else {
-        {
+        if (n_fft != 32 && n_fft != 64 && n_fft != 128 && n_fft != 256 &&
+            n_fft != 512 && n_fft != 1024 && n_fft != 2048 && n_fft != 4096) {
+                EIDSP_ERR(EIDSP_PARAMETER_INVALID); // fixed fft lib does not support arbitrary input length
+        }
+        else {
             // hardware acceleration only works for the powers above...
             arm_rfft_instance_q15 rfft_instance;
             arm_status status = arm_rfft_init_q15(&rfft_instance, n_fft, 0, 1);
@@ -1660,14 +1714,11 @@ public:
                 fft_output_buffer_ix += 2;
             }
         }
-#else
-        int ret = software_rfft(fft_input.buffer, output, n_fft, n_fft_out_features);
-        if (ret != EIDSP_OK) {
-            EIDSP_ERR(ret);
-        }
-#endif
 
         return EIDSP_OK;
+#else
+        return EIDSP_REQUIRES_CMSIS_DSP;
+#endif
     }
 
     /**
@@ -1889,7 +1940,7 @@ public:
      * @param signal Output signal
      * @returns EIDSP_OK if ok
      */
-    static int signal_from_buffer(float *data, size_t data_size, signal_t *signal)
+    static int signal_from_buffer(const float *data, size_t data_size, signal_t *signal)
     {
         signal->total_length = data_size;
 #ifdef __MBED__
@@ -1902,27 +1953,7 @@ public:
         return EIDSP_OK;
     }
 
-    static int signal_from_buffer_i16(EIDSP_i16 *data_i16, size_t data_size, signal_i16_t *signal)
-    {
-        signal->total_length = data_size;
-#ifdef __MBED__
-        signal->get_data = mbed::callback(&numpy::signal_get_data_i16, data_i16);
-#else
-        signal->get_data = [data_i16](size_t offset, size_t length, EIDSP_i16 *out_ptr) {
-            return numpy::signal_get_data_i16(data_i16, offset, length, out_ptr);
-        };
 #endif
-        return EIDSP_OK;
-    }
-#endif
-
-    static int signal_from_buffer_pointer_function_q15(size_t data_size, signal_i16_t *signal, int (*data_i16)(size_t, size_t, EIDSP_i16 *))
-    {
-        signal->total_length = data_size;
-        signal->get_data = data_i16;
-
-        return EIDSP_OK;
-    }
 
 #if defined ( __GNUC__ )
 #pragma GCC diagnostic push
@@ -1958,6 +1989,38 @@ public:
 
         return r;
     }
+
+    /**
+     * Fast log10 and log2 functions, significantly faster than the ones from math.h (~6x for log10 on M4F)
+     * From https://community.arm.com/developer/tools-software/tools/f/armds-forum/4292/cmsis-dsp-new-functionality-proposal/22621#22621
+     * @param a Input number
+     * @returns Log2 value of a
+     */
+    __attribute__((always_inline)) static inline float log2(float a)
+    {
+        int e;
+        float f = frexpf(fabsf(a), &e);
+        float y = 1.23149591368684f;
+        y *= f;
+        y += -4.11852516267426f;
+        y *= f;
+        y += 6.02197014179219f;
+        y *= f;
+        y += -3.13396450166353f;
+        y += e;
+        return y;
+    }
+
+    /**
+     * Fast log10 and log2 functions, significantly faster than the ones from math.h (~6x for log10 on M4F)
+     * From https://community.arm.com/developer/tools-software/tools/f/armds-forum/4292/cmsis-dsp-new-functionality-proposal/22621#22621
+     * @param a Input number
+     * @returns Log10 value of a
+     */
+    __attribute__((always_inline)) static inline float log10(float a)
+    {
+        return numpy::log2(a) * 0.3010299956639812f;
+    }
 #if defined ( __GNUC__ )
 #pragma GCC diagnostic pop
 #endif
@@ -1971,6 +2034,20 @@ public:
     {
         for (uint32_t ix = 0; ix < matrix->rows * matrix->cols; ix++) {
             matrix->buffer[ix] = numpy::log(matrix->buffer[ix]);
+        }
+
+        return EIDSP_OK;
+    }
+
+    /**
+     * Calculate the log10 of a matrix. Does an in-place replacement.
+     * @param matrix Matrix (MxN)
+     * @returns 0 if OK
+     */
+    static int log10(matrix_t *matrix)
+    {
+        for (uint32_t ix = 0; ix < matrix->rows * matrix->cols; ix++) {
+            matrix->buffer[ix] = numpy::log10(matrix->buffer[ix]);
         }
 
         return EIDSP_OK;
@@ -2028,7 +2105,9 @@ public:
             EIDSP_ERR(r);
         }
 
-        float row_scale = 1.0f / (max_matrix.buffer[0] - min_matrix.buffer[0]);
+        float min_max_diff = (max_matrix.buffer[0] - min_matrix.buffer[0]);
+        /* Prevent divide by 0 by setting minimum value for divider */
+        float row_scale = min_max_diff < 0.001 ? 1.0f : 1.0f / min_max_diff;
 
         r = subtract(&temp_matrix, min_matrix.buffer[0]);
         if (r != EIDSP_OK) {
@@ -2038,6 +2117,45 @@ public:
         r = scale(&temp_matrix, row_scale);
         if (r != EIDSP_OK) {
             EIDSP_ERR(r);
+        }
+
+        return EIDSP_OK;
+    }
+
+    /**
+     * Clip (limit) the values in an array. Does an in-place replacement.
+     * Values outside the interval are clipped to the interval edges.
+     * For example, if an interval of [0, 1] is specified, values smaller than 0 become 0,
+     * and values larger than 1 become 1.
+     * @param matrix
+     * @param min Min value to be clipped
+     * @param max Max value to be clipped
+     */
+    static int clip(matrix_t *matrix, float min, float max) {
+        if (max < min) {
+            EIDSP_ERR(EIDSP_PARAMETER_INVALID);
+        }
+
+        for (size_t ix = 0; ix < matrix->rows * matrix->cols; ix++) {
+            if (min != DBL_MIN && matrix->buffer[ix] < min) {
+                matrix->buffer[ix] = min;
+            }
+            else if (max != DBL_MAX && matrix->buffer[ix] > max) {
+                matrix->buffer[ix] = max;
+            }
+        }
+
+        return EIDSP_OK;
+    }
+
+    /**
+     * Cut the data behind the comma on a matrix. Does an in-place replacement.
+     * E.g. around([ 3.01, 4.89 ]) becomes [3, 4]
+     * @param matrix
+     */
+    static int round(matrix_t *matrix) {
+        for (size_t ix = 0; ix < matrix->rows * matrix->cols; ix++) {
+            matrix->buffer[ix] = ::round(matrix->buffer[ix]);
         }
 
         return EIDSP_OK;
@@ -2059,7 +2177,7 @@ private:
             EIDSP_ERR(EIDSP_OUT_OF_MEM);
         }
 
-        ei_dsp_register_alloc(kiss_fftr_mem_length);
+        ei_dsp_register_alloc(kiss_fftr_mem_length, cfg);
 
         // execute the rfft operation
         kiss_fftr(cfg, fft_input, fft_output);
@@ -2085,7 +2203,7 @@ private:
             EIDSP_ERR(EIDSP_OUT_OF_MEM);
         }
 
-        ei_dsp_register_alloc(kiss_fftr_mem_length);
+        ei_dsp_register_alloc(kiss_fftr_mem_length, cfg);
 
         // execute the rfft operation
         kiss_fftr(cfg, fft_input, (kiss_fft_cpx*)output);
@@ -2095,7 +2213,7 @@ private:
         return EIDSP_OK;
     }
 
-    static int signal_get_data(float *in_buffer, size_t offset, size_t length, float *out_ptr)
+    static int signal_get_data(const float *in_buffer, size_t offset, size_t length, float *out_ptr)
     {
         memcpy(out_ptr, in_buffer + offset, length * sizeof(float));
         return 0;
@@ -2453,6 +2571,141 @@ private:
             *pOut = 0;
         }
     }
+
+#if EIDSP_USE_CMSIS_DSP
+    /**
+     * Initialize a CMSIS-DSP fast rfft structure
+     * We do it this way as this means we can compile out fast_init calls which hints the compiler
+     * to which tables can be removed
+     */
+    static int cmsis_rfft_init_f32(arm_rfft_fast_instance_f32 *rfft_instance, const size_t n_fft)
+    {
+// ARM cores (ex M55) with Helium extensions (MVEF) need special treatment (Issue 2843)
+#if EI_CLASSIFIER_HAS_FFT_INFO == 1 && !defined(ARM_MATH_MVEF)
+        arm_status status;
+        switch (n_fft) {
+#if EI_CLASSIFIER_LOAD_FFT_32 == 1
+            case 32: {
+                arm_cfft_instance_f32 *S = &(rfft_instance->Sint);
+                S->fftLen = 16U;
+                S->pTwiddle = NULL;
+                S->bitRevLength = arm_cfft_sR_f32_len16.bitRevLength;
+                S->pBitRevTable = arm_cfft_sR_f32_len16.pBitRevTable;
+                S->pTwiddle = arm_cfft_sR_f32_len16.pTwiddle;
+                rfft_instance->fftLenRFFT = 32U;
+                rfft_instance->pTwiddleRFFT = (float32_t *) twiddleCoef_rfft_32;
+                status = ARM_MATH_SUCCESS;
+                break;
+            }
+#endif
+#if EI_CLASSIFIER_LOAD_FFT_64 == 1
+            case 64: {
+                arm_cfft_instance_f32 *S = &(rfft_instance->Sint);
+                S->fftLen = 32U;
+                S->pTwiddle = NULL;
+                S->bitRevLength = arm_cfft_sR_f32_len32.bitRevLength;
+                S->pBitRevTable = arm_cfft_sR_f32_len32.pBitRevTable;
+                S->pTwiddle = arm_cfft_sR_f32_len32.pTwiddle;
+                rfft_instance->fftLenRFFT = 64U;
+                rfft_instance->pTwiddleRFFT = (float32_t *) twiddleCoef_rfft_64;
+                status = ARM_MATH_SUCCESS;
+                break;
+            }
+#endif
+#if EI_CLASSIFIER_LOAD_FFT_128 == 1
+            case 128: {
+                arm_cfft_instance_f32 *S = &(rfft_instance->Sint);
+                S->fftLen = 64U;
+                S->pTwiddle = NULL;
+                S->bitRevLength = arm_cfft_sR_f32_len64.bitRevLength;
+                S->pBitRevTable = arm_cfft_sR_f32_len64.pBitRevTable;
+                S->pTwiddle = arm_cfft_sR_f32_len64.pTwiddle;
+                rfft_instance->fftLenRFFT = 128U;
+                rfft_instance->pTwiddleRFFT = (float32_t *) twiddleCoef_rfft_128;
+                status = ARM_MATH_SUCCESS;
+                break;
+            }
+#endif
+#if EI_CLASSIFIER_LOAD_FFT_256 == 1
+            case 256: {
+                arm_cfft_instance_f32 *S = &(rfft_instance->Sint);
+                S->fftLen = 128U;
+                S->pTwiddle = NULL;
+                S->bitRevLength = arm_cfft_sR_f32_len128.bitRevLength;
+                S->pBitRevTable = arm_cfft_sR_f32_len128.pBitRevTable;
+                S->pTwiddle = arm_cfft_sR_f32_len128.pTwiddle;
+                rfft_instance->fftLenRFFT = 256U;
+                rfft_instance->pTwiddleRFFT = (float32_t *) twiddleCoef_rfft_256;
+                status = ARM_MATH_SUCCESS;
+                break;
+            }
+#endif
+#if EI_CLASSIFIER_LOAD_FFT_512 == 1
+            case 512: {
+                arm_cfft_instance_f32 *S = &(rfft_instance->Sint);
+                S->fftLen = 256U;
+                S->pTwiddle = NULL;
+                S->bitRevLength = arm_cfft_sR_f32_len256.bitRevLength;
+                S->pBitRevTable = arm_cfft_sR_f32_len256.pBitRevTable;
+                S->pTwiddle = arm_cfft_sR_f32_len256.pTwiddle;
+                rfft_instance->fftLenRFFT = 512U;
+                rfft_instance->pTwiddleRFFT = (float32_t *) twiddleCoef_rfft_512;
+                status = ARM_MATH_SUCCESS;
+                break;
+            }
+#endif
+#if EI_CLASSIFIER_LOAD_FFT_1024 == 1
+            case 1024: {
+                arm_cfft_instance_f32 *S = &(rfft_instance->Sint);
+                S->fftLen = 512U;
+                S->pTwiddle = NULL;
+                S->bitRevLength = arm_cfft_sR_f32_len512.bitRevLength;
+                S->pBitRevTable = arm_cfft_sR_f32_len512.pBitRevTable;
+                S->pTwiddle = arm_cfft_sR_f32_len512.pTwiddle;
+                rfft_instance->fftLenRFFT = 1024U;
+                rfft_instance->pTwiddleRFFT = (float32_t *) twiddleCoef_rfft_1024;
+                status = ARM_MATH_SUCCESS;
+                break;
+            }
+#endif
+#if EI_CLASSIFIER_LOAD_FFT_2048 == 1
+            case 2048: {
+                arm_cfft_instance_f32 *S = &(rfft_instance->Sint);
+                S->fftLen = 1024U;
+                S->pTwiddle = NULL;
+                S->bitRevLength = arm_cfft_sR_f32_len1024.bitRevLength;
+                S->pBitRevTable = arm_cfft_sR_f32_len1024.pBitRevTable;
+                S->pTwiddle = arm_cfft_sR_f32_len1024.pTwiddle;
+                rfft_instance->fftLenRFFT = 2048U;
+                rfft_instance->pTwiddleRFFT = (float32_t *) twiddleCoef_rfft_2048;
+                status = ARM_MATH_SUCCESS;
+                break;
+            }
+#endif
+#if EI_CLASSIFIER_LOAD_FFT_4096 == 1
+            case 4096: {
+                arm_cfft_instance_f32 *S = &(rfft_instance->Sint);
+                S->fftLen = 2048U;
+                S->pTwiddle = NULL;
+                S->bitRevLength = arm_cfft_sR_f32_len2048.bitRevLength;
+                S->pBitRevTable = arm_cfft_sR_f32_len2048.pBitRevTable;
+                S->pTwiddle = arm_cfft_sR_f32_len2048.pTwiddle;
+                rfft_instance->fftLenRFFT = 4096U;
+                rfft_instance->pTwiddleRFFT = (float32_t *) twiddleCoef_rfft_4096;
+                status = ARM_MATH_SUCCESS;
+                break;
+            }
+#endif
+            default:
+                return EIDSP_FFT_TABLE_NOT_LOADED;
+        }
+
+        return status;
+#else
+        return arm_rfft_fast_init_f32(rfft_instance, n_fft);
+#endif
+    }
+#endif // #if EIDSP_USE_CMSIS_DSP
 };
 
 } // namespace ei
