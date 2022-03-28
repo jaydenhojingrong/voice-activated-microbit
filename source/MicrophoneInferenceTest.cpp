@@ -172,6 +172,7 @@ mic_inference_test()
 
                 if (heard_keyword_this_window) {
                     ei_printf("\nHeard keyword: %s (%d times, needs 5)\n", INFERENCING_KEYWORD, keyword_count);
+                    ei_printf("\nUWU\n");
                 }
 
                 if (keyword_count >= 1) {
